@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}My Bookings - Smart Parking{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-white fw-bold mb-1">My <span class="text-cyan">Parking Passes</span></h2>
+            <p class="text-white-50 mb-0">View active reservations, digital passes, and booking history</p>
+        </div>
+        <a href="{{ url_for('views.malls_page') }}" class="btn btn-neon-cyan btn-sm">
+            <i class="fas fa-plus me-1"></i> Reserve New Slot
+        </a>
+    </div>
+
+    <!-- Bookings Container -->
+    <div id="bookings-list" class="row g-4">
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-cyan" role="status"></div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Pass Viewer Modal -->
+<div class="modal fade" id="qrPassModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card p-4 border-cyan">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-white fw-bold" id="modal-pass-code">SMART PARKING PASS</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div id="modal-qr-canvas" class="d-flex justify-content-center bg-dark p-3 rounded-4 d-inline-block border border-secondary mb-3"></div>
+                <div id="modal-pass-details" class="text-white-50 small"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/booking.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', fetchUserBookings);
+
+async function fetchUserBookings() {
+    const container = document.getElementById('bookings-list');
+    try {
+        const res = await fetch('/api/bookings');
+        const data = await res.json();
+        
+        if (data.success && data.bookings.length > 0) {
+            container.innerHTML = data.bookings.map(b => renderBookingCard(b)).join('');
+        } else {
+            container.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <div class="glass-card p-5">
+                        <i class="fas fa-ticket-alt text-muted display-3 mb-3"></i>
+                        <h4 class="text-white">No Reservations Found</h4>
+                        <p class="text-white-50">You haven't booked any smart mall parking slots yet.</p>
+                        <a href="/malls" class="btn btn-neon-cyan mt-2">Find Parking</a>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (err) {
+        container.innerHTML = `<div class="col-12 text-center text-danger py-4">Error loading bookings.</div>`;
+    }
+}
+
+function renderBookingCard(b) {
+    let statusBadge = 'badge-available';
+    if (b.booking_status === 'active') statusBadge = 'badge-green bg-success bg-opacity-25 text-success border border-success';
+    else if (b.booking_status === 'cancelled') statusBadge = 'badge-red bg-danger bg-opacity-25 text-danger border border-danger';
+
+    const isEligibleCancel = (b.booking_status !== 'cancelled' && b.booking_status !== 'completed');
+
+    return `
+        <div class="col-md-6 col-lg-4">
+            <div class="glass-card p-4 h-100 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <span class="text-cyan font-monospace small font-semibold">${b.booking_code}</span>
+                        <h5 class="text-white fw-bold mb-0">${b.mall_name}</h5>
+                    </div>
+                    <span class="badge ${statusBadge} text-uppercase">${b.booking_status}</span>
+                </div>
+
+                <div class="glass-card p-3 mb-3 bg-dark bg-opacity-50 flex-grow-1">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-white-50 small">Location:</span>
+                        <span class="text-white small">${b.city_name} • ${b.floor_level}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-white-50 small">Parking Slot:</span>
+                        <span class="text-green font-monospace fw-bold fs-6">${b.slot_number}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-white-50 small">Vehicle:</span>
+                        <span class="text-white font-monospace">${b.vehicle_number} (${b.vehicle_type.toUpperCase()})</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-white-50 small">Start Time:</span>
+                        <span class="text-white-50 small">${b.start_time}</span>
+                    </div>
+                    <div class="d-flex justify-content-between pt-2 border-top border-secondary border-opacity-25">
+                        <span class="text-white-50 small">Total Paid:</span>
+                        <span class="text-green fw-bold">₹${b.total_amount}</span>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button onclick="openPassModal('${b.booking_code}', '${b.city_name}', '${b.mall_name}', '${b.slot_number}', '${b.vehicle_number}')" class="btn btn-neon-cyan btn-sm flex-grow-1">
+                        <i class="fas fa-qrcode me-1"></i> View Pass
+                    </button>
+                    ${isEligibleCancel ? `
+                        <button onclick="cancelBooking(${b.id})" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function openPassModal(code, city, mall, slot, vehicle) {
+    document.getElementById('modal-pass-code').innerText = `PASS #${code}`;
+    const modalQr = document.getElementById('modal-qr-canvas');
+    modalQr.innerHTML = '';
+    new QRCode(modalQr, {
+        text: `SMARTPARKING|${code}|${city}|${mall}|${slot}|${vehicle}`,
+        width: 170,
+        height: 170,
+        colorDark: "#00f3ff",
+        colorLight: "#050811"
+    });
+    document.getElementById('modal-pass-details').innerHTML = `
+        <strong>${mall}</strong> (${city})<br>
+        Slot: <strong class="text-cyan">${slot}</strong> • Vehicle: ${vehicle}
+    `;
+    new bootstrap.Modal(document.getElementById('qrPassModal')).show();
+}
+
+async function cancelBooking(bookingId) {
+    if (!confirm("Are you sure you want to cancel this booking? Slot will be released immediately.")) return;
+
+    try {
+        const res = await fetch(`/api/bookings/${bookingId}/cancel`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, "success");
+            fetchUserBookings();
+        } else {
+            showToast(data.message, "error");
+        }
+    } catch (err) {
+        showToast("Cancellation failed.", "error");
+    }
+}
+</script>
+{% endblock %}
+{% endblock %}

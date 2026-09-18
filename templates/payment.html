@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+
+{% block title %}Simulated Payment - Smart Parking{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center py-lg-3">
+        <div class="col-lg-8">
+            <div class="glass-card p-4 p-md-5 position-relative">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+                    <div>
+                        <span class="badge bg-warning text-dark font-monospace mb-1">SIMULATED PAYMENT SYSTEM</span>
+                        <h3 class="text-white fw-bold mb-0">Complete Your Payment</h3>
+                    </div>
+                    <div class="text-end">
+                        <span class="text-white-50 small d-block">Booking Ref</span>
+                        <strong class="text-cyan font-monospace fs-5">{{ booking.booking_code }}</strong>
+                    </div>
+                </div>
+
+                <!-- Complete Booking Summary Grid -->
+                <div class="glass-card p-4 mb-4 bg-dark bg-opacity-50">
+                    <h6 class="text-white-50 font-monospace text-uppercase small mb-3"><i class="fas fa-receipt text-cyan me-2"></i>BOOKING SUMMARY</h6>
+                    <div class="row g-3 small">
+                        <div class="col-6 col-md-3">
+                            <span class="text-white-50 d-block">City</span>
+                            <strong class="text-white fs-6">{{ booking.city_name }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="text-white-50 d-block">Mall</span>
+                            <strong class="text-white fs-6">{{ booking.mall_name }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="text-white-50 d-block">Floor</span>
+                            <strong class="text-white fs-6">{{ booking.floor_level }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="text-white-50 d-block">Slot Number</span>
+                            <strong class="text-green fs-5 font-monospace">{{ booking.slot_number }}</strong>
+                        </div>
+
+                        <div class="col-6 col-md-3">
+                            <span class="text-white-50 d-block">Vehicle Type</span>
+                            <strong class="text-white text-uppercase">{{ booking.vehicle_type }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="text-white-50 d-block">Reg. Number</span>
+                            <strong class="text-white font-monospace">{{ booking.vehicle_number }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="text-white-50 d-block">Start Time</span>
+                            <strong class="text-white">{{ booking.start_time }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="text-white-50 d-block">Duration & Rate</span>
+                            <strong class="text-white">{{ booking.duration_hours }} Hr(s) @ ₹{{ booking.price_per_hour }}/hr</strong>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 mt-3 border-top border-secondary border-opacity-25">
+                        <span class="text-white fw-bold fs-5">Total Amount Payable:</span>
+                        <span class="text-green fs-2 fw-bold font-monospace">₹{{ booking.total_amount }}</span>
+                    </div>
+                </div>
+
+                <!-- Payment Methods Selector Tabs -->
+                <ul class="nav nav-pills nav-fill mb-4 glass-card p-1" id="paymentTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active btn-sm text-white fw-semibold" data-bs-toggle="pill" data-bs-target="#upi-tab" onclick="setMethod('UPI')">
+                            <i class="fas fa-qrcode me-1 text-cyan"></i> UPI Payment
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link btn-sm text-white fw-semibold" data-bs-toggle="pill" data-bs-target="#card-tab" onclick="setMethod('CARD')">
+                            <i class="fas fa-credit-card me-1 text-yellow"></i> Credit / Debit Card
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link btn-sm text-white fw-semibold" data-bs-toggle="pill" data-bs-target="#qr-tab" onclick="setMethod('QR')">
+                            <i class="fas fa-qrcode me-1 text-green"></i> Dynamic QR Payment
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content mb-4" id="paymentTabContent">
+                    <!-- 1. UPI Payment Mode -->
+                    <div class="tab-pane fade show active py-2" id="upi-tab">
+                        <div class="row align-items-center g-4">
+                            <div class="col-md-6">
+                                <label class="form-label text-white-50 small fw-semibold">Enter your UPI ID</label>
+                                <div class="input-group mb-3">
+                                    <span class="input-group-text bg-dark border-secondary text-white-50"><i class="fas fa-at"></i></span>
+                                    <input type="text" id="upi_id" class="form-control form-control-glass font-monospace" placeholder="username@upi" value="user@okaxis">
+                                </div>
+                                <button onclick="executePayment('UPI')" class="btn btn-neon-green w-100 py-3 fw-bold">
+                                    <i class="fas fa-check-circle me-1"></i> Pay ₹{{ booking.total_amount }} with UPI
+                                </button>
+                            </div>
+                            <div class="col-md-6 text-center border-start border-secondary border-opacity-25">
+                                <span class="text-white-50 small d-block mb-2">Scan & Pay via any UPI App</span>
+                                <div class="bg-white p-3 d-inline-block rounded-3 shadow mb-2">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=smartparking@upi%26pn=SmartParking%26am={{ booking.total_amount }}%26tn={{ booking.booking_code }}" alt="UPI QR" class="img-fluid">
+                                </div>
+                                <div class="extra-small text-white-50">Supports GPay, PhonePe, Paytm, BHIM</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Card Payment Mode -->
+                    <div class="tab-pane fade py-2" id="card-tab">
+                        <form id="card-form" onsubmit="event.preventDefault(); executePayment('CARD');">
+                            <div class="mb-3">
+                                <label class="form-label text-white-50 small fw-semibold">Cardholder Name</label>
+                                <input type="text" class="form-control form-control-glass" placeholder="John Doe" value="Demo Cardholder" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-white-50 small fw-semibold">Card Number</label>
+                                <input type="text" class="form-control form-control-glass font-monospace" placeholder="4532 •••• •••• 8892" value="4532 8892 1102 9934" required>
+                            </div>
+                            <div class="row g-2 mb-4">
+                                <div class="col-6">
+                                    <label class="form-label text-white-50 small fw-semibold">Expiry Date</label>
+                                    <input type="text" class="form-control form-control-glass" placeholder="MM/YY" value="12/28" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label text-white-50 small fw-semibold">CVV</label>
+                                    <input type="password" class="form-control form-control-glass font-monospace" placeholder="123" value="888" maxlength="3" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-neon-green w-100 py-3 fw-bold">
+                                <i class="fas fa-lock me-2"></i> Pay ₹{{ booking.total_amount }} securely
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- 3. Dynamic QR Payment Mode -->
+                    <div class="tab-pane fade text-center py-2" id="qr-tab">
+                        <span class="text-white-50 small d-block mb-3">Dynamic Payment QR Code</span>
+                        <div class="bg-dark p-3 rounded-4 d-inline-block border border-cyan border-opacity-50 mb-3">
+                            <div id="payment-qr-canvas" class="d-flex justify-content-center"></div>
+                        </div>
+                        <div class="text-white-50 small mb-3">
+                            Ref: <strong class="text-cyan font-monospace">{{ booking.booking_code }}</strong> • Amount: <strong class="text-green">₹{{ booking.total_amount }}</strong>
+                        </div>
+                        <button onclick="executePayment('QR')" class="btn btn-neon-cyan px-5 py-3 fw-bold">
+                            <i class="fas fa-check-circle me-1"></i> I Have Scanned & Paid
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Professional Payment Processing Animation Overlay -->
+                <div id="payment-loader" class="position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-95 rounded-4 d-flex flex-column align-items-center justify-content-center d-none" style="z-index: 100;">
+                    <div id="spinner-box" class="spinner-border text-cyan mb-3" style="width: 3.5rem; height: 3.5rem;" role="status"></div>
+                    <div id="success-icon" class="display-1 text-green mb-3 d-none animate-bounce"><i class="fas fa-check-circle"></i></div>
+                    <h4 id="loader-title" class="text-white fw-bold">Processing Payment...</h4>
+                    <p id="loader-subtitle" class="text-white-50 small">Communicating with payment gateway</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/booking.js') }}"></script>
+<script>
+let currentMethod = 'UPI';
+
+function setMethod(method) {
+    currentMethod = method;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Generate Dynamic Payment QR Code
+    const qrDiv = document.getElementById('payment-qr-canvas');
+    if (qrDiv) {
+        new QRCode(qrDiv, {
+            text: `SMARTPARKING|PAY|{{ booking.booking_code }}|AMOUNT:{{ booking.total_amount }}|MALL:{{ booking.mall_name }}|SLOT:{{ booking.slot_number }}`,
+            width: 170,
+            height: 170,
+            colorDark: "#00f3ff",
+            colorLight: "#050811"
+        });
+    }
+});
+
+async function executePayment(methodOverride) {
+    const method = methodOverride || currentMethod;
+    const bookingId = {{ booking.id }};
+    
+    const loader = document.getElementById('payment-loader');
+    const spinner = document.getElementById('spinner-box');
+    const successIcon = document.getElementById('success-icon');
+    const title = document.getElementById('loader-title');
+    const subtitle = document.getElementById('loader-subtitle');
+
+    loader.classList.remove('d-none');
+    spinner.classList.remove('d-none');
+    successIcon.classList.add('d-none');
+    title.innerText = "Processing Payment...";
+    subtitle.innerText = "Verifying transaction with bank";
+
+    try {
+        // Simulate 1.5s professional payment animation
+        await new Promise(r => setTimeout(r, 1200));
+
+        const res = await fetch('/api/payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                booking_id: bookingId,
+                payment_method: method
+            })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            // Show Payment Successful Animation
+            spinner.classList.add('d-none');
+            successIcon.classList.remove('d-none');
+            title.innerText = "✓ Payment Successful!";
+            subtitle.innerText = "Generating your Digital Parking Pass...";
+
+            setTimeout(() => {
+                window.location.href = `/confirmation?booking_id=${bookingId}`;
+            }, 1000);
+        } else {
+            loader.classList.add('d-none');
+            showToast("Payment failed. Your parking slot has not been reserved.", "error");
+        }
+    } catch (err) {
+        loader.classList.add('d-none');
+        showToast("Payment failed. Your parking slot has not been reserved.", "error");
+    }
+}
+</script>
+{% endblock %}
+{% endblock %}

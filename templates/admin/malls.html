@@ -1,0 +1,274 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Manage Cities & Malls - Smart Parking Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-white fw-bold mb-1">Cities & <span class="text-cyan">Mall Management</span></h2>
+        <p class="text-white-50 mb-0">Add, edit, upload images, and configure smart parking partner malls across cities</p>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-glass btn-sm" data-bs-toggle="modal" data-bs-target="#addCityModal">
+            <i class="fas fa-plus me-1"></i> Add City
+        </button>
+        <button class="btn btn-neon-cyan btn-sm" data-bs-toggle="modal" data-bs-target="#addMallModal">
+            <i class="fas fa-plus me-1"></i> Add Smart Mall
+        </button>
+    </div>
+</div>
+
+<!-- Cities Grid Summary -->
+<div class="row g-3 mb-4">
+    {% for city in cities %}
+    <div class="col-md-4 col-lg-2-4">
+        <div class="glass-card p-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="text-white fw-bold mb-0">{{ city.name }}</h6>
+                <span class="text-white-50 small">{{ city.malls_count }} Malls</span>
+            </div>
+            <button onclick="deleteCity({{ city.id }})" class="btn btn-sm text-danger"><i class="fas fa-trash"></i></button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Malls Table with Image Status & Upload Trigger -->
+<div class="glass-card p-4">
+    <h5 class="text-white fw-bold mb-3"><i class="fas fa-building text-cyan me-2"></i>Active Smart Malls & Image Status</h5>
+    
+    <div class="table-responsive">
+        <table class="table admin-table">
+            <thead>
+                <tr>
+                    <th>Mall Name</th>
+                    <th>City</th>
+                    <th>Image Status</th>
+                    <th>Address</th>
+                    <th>Floors</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mall in malls %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-3">
+                            <img src="{{ mall.image_url }}" onerror="this.onerror=null; this.src='/static/images/malls/default-mall.jpg';" alt="{{ mall.name }}" class="rounded-2 object-fit-cover" style="width: 50px; height: 50px;">
+                            <div>
+                                <strong class="text-white d-block">{{ mall.name }}</strong>
+                                <span class="text-white-50 extra-small">{{ mall.opening_time }} - {{ mall.closing_time }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge bg-cyan bg-opacity-10 text-cyan">{{ mall.city.name }}</span></td>
+                    <td>
+                        {% if mall.image_status == 'available' %}
+                            <span class="badge bg-success bg-opacity-25 text-success border border-success"><i class="fas fa-check-circle me-1"></i> Image Available</span>
+                        {% else %}
+                            <span class="badge bg-warning bg-opacity-25 text-warning border border-warning"><i class="fas fa-exclamation-triangle me-1"></i> Image Missing</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-white-50 small">{{ mall.address }}</td>
+                    <td><span class="badge bg-secondary">{{ mall.total_floors }} Floors</span></td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <button onclick="openUploadModal({{ mall.id }}, '{{ mall.name|escape }}')" class="btn btn-sm btn-glass text-cyan" title="Upload Custom Image">
+                                <i class="fas fa-upload me-1"></i> Upload
+                            </button>
+                            <button onclick="deleteMall({{ mall.id }})" class="btn btn-sm btn-outline-danger" title="Delete Mall">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add City Modal -->
+<div class="modal fade" id="addCityModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card p-4">
+            <h5 class="text-white fw-bold mb-3">Add New City</h5>
+            <form id="add-city-form">
+                <div class="mb-3">
+                    <label class="form-label text-white-50 small">City Name</label>
+                    <input type="text" id="city_name" class="form-control form-control-glass" placeholder="e.g. Salem" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white-50 small">State</label>
+                    <input type="text" id="city_state" class="form-control form-control-glass" value="Tamil Nadu">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white-50 small">Image URL (Optional)</label>
+                    <input type="text" id="city_image" class="form-control form-control-glass" placeholder="/static/images/malls/default-mall.jpg">
+                </div>
+                <button type="submit" class="btn btn-neon-cyan w-100 py-2">Save City</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Mall Modal -->
+<div class="modal fade" id="addMallModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card p-4">
+            <h5 class="text-white fw-bold mb-3">Add New Smart Mall</h5>
+            <form id="add-mall-form">
+                <div class="mb-3">
+                    <label class="form-label text-white-50 small">City</label>
+                    <select id="mall_city_id" class="form-select form-control-glass" required>
+                        {% for city in cities %}
+                        <option value="{{ city.id }}">{{ city.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white-50 small">Mall Name</label>
+                    <input type="text" id="mall_name" class="form-control form-control-glass" placeholder="e.g. Grand Mall" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white-50 small">Address</label>
+                    <textarea id="mall_address" class="form-control form-control-glass" rows="2" required></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-white-50 small">Image URL / Path (Optional)</label>
+                    <input type="text" id="mall_image" class="form-control form-control-glass" placeholder="/static/images/malls/default-mall.jpg">
+                </div>
+                <button type="submit" class="btn btn-neon-cyan w-100 py-2">Create Mall & Auto-Generate 3D Slots</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Image Modal -->
+<div class="modal fade" id="uploadImageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card p-4">
+            <h5 class="text-white fw-bold mb-1">Upload Mall Image</h5>
+            <p class="text-white-50 small mb-3" id="upload-mall-title">Choose image file for mall</p>
+            
+            <form id="upload-image-form">
+                <input type="hidden" id="upload_mall_id">
+                <div class="mb-3">
+                    <label class="form-label text-white-50 small">Choose Image (JPG, PNG, WEBP)</label>
+                    <input type="file" id="upload_image_file" class="form-control form-control-glass" accept="image/jpeg,image/png,image/webp" required onchange="previewUploadImage(this)">
+                </div>
+                
+                <!-- Image Preview Box -->
+                <div id="image-preview-container" class="mb-3 text-center d-none">
+                    <img id="image-preview" src="" alt="Preview" class="img-fluid rounded-3 border border-secondary" style="max-height: 180px; object-fit: cover;">
+                </div>
+
+                <button type="submit" class="btn btn-neon-green w-100 py-2 fw-semibold">
+                    <i class="fas fa-cloud-upload-alt me-1"></i> Upload & Save Image
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.getElementById('add-city-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('city_name').value;
+    const state = document.getElementById('city_state').value;
+    const image_url = document.getElementById('city_image').value;
+
+    const res = await fetch('/api/admin/cities', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name, state, image_url })
+    });
+    const data = await res.json();
+    if (data.success) location.reload();
+    else showToast(data.message, 'error');
+});
+
+document.getElementById('add-mall-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const city_id = document.getElementById('mall_city_id').value;
+    const name = document.getElementById('mall_name').value;
+    const address = document.getElementById('mall_address').value;
+    const image_url = document.getElementById('mall_image').value;
+
+    const res = await fetch('/api/admin/malls', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ city_id, name, address, image_url })
+    });
+    const data = await res.json();
+    if (data.success) location.reload();
+    else showToast(data.message, 'error');
+});
+
+function openUploadModal(mallId, mallName) {
+    document.getElementById('upload_mall_id').value = mallId;
+    document.getElementById('upload-mall-title').innerText = `Choose image file for ${mallName}`;
+    document.getElementById('image-preview-container').classList.add('d-none');
+    document.getElementById('upload_image_file').value = '';
+    new bootstrap.Modal(document.getElementById('uploadImageModal')).show();
+}
+
+function previewUploadImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('image-preview').src = e.target.result;
+            document.getElementById('image-preview-container').classList.remove('d-none');
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+document.getElementById('upload-image-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const mallId = document.getElementById('upload_mall_id').value;
+    const fileInput = document.getElementById('upload_image_file');
+    
+    if (!fileInput.files || !fileInput.files[0]) {
+        showToast("Please choose an image file to upload.", "error");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('image', fileInput.files[0]);
+
+    try {
+        const res = await fetch(`/api/admin/malls/${mallId}/upload-image`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, "success");
+            setTimeout(() => location.reload(), 600);
+        } else {
+            showToast(data.message, "error");
+        }
+    } catch (err) {
+        showToast("Image upload failed.", "error");
+    }
+});
+
+async function deleteMall(id) {
+    if (!confirm("Delete this mall and all its 3D slots?")) return;
+    const res = await fetch(`/api/admin/malls/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) location.reload();
+}
+
+async function deleteCity(id) {
+    if (!confirm("Delete this city and all associated malls?")) return;
+    const res = await fetch(`/api/admin/cities/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) location.reload();
+}
+</script>
+{% endblock %}
+{% endblock %}

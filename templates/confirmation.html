@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Booking Confirmed - Pass #{{ booking.booking_code }} | Smart Parking{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center py-lg-3">
+        <div class="col-md-8 col-lg-7">
+            <!-- Digital Parking Pass Card -->
+            <div id="parking-pass-card" class="glass-card p-4 p-md-5 text-white position-relative overflow-hidden" style="border: 2px solid var(--neon-cyan);">
+                
+                <!-- Success Header Banner -->
+                <div class="text-center mb-4 pb-4 border-bottom border-secondary border-opacity-25">
+                    <div class="badge bg-green bg-opacity-10 text-green border border-green border-opacity-25 px-3 py-2 rounded-pill mb-3 font-semibold fs-6">
+                        <i class="fas fa-check-circle me-1"></i> Booking Confirmed ✓
+                    </div>
+                    <h2 class="fw-bold tracking-tight text-white mb-1">SMART PARKING</h2>
+                    <div class="text-cyan font-monospace fs-4 fw-bold">Booking ID: {{ booking.booking_code }}</div>
+                </div>
+
+                <div class="row align-items-center g-4">
+                    <!-- Left: QR Code Display -->
+                    <div class="col-md-5 text-center">
+                        <div class="bg-dark p-3 rounded-4 d-inline-block border border-cyan border-opacity-50 shadow-lg mb-2">
+                            <div id="qrcode-canvas" class="d-flex justify-content-center"></div>
+                        </div>
+                        <div class="small text-white-50 font-monospace">Scan at Mall Gate Scanner</div>
+                    </div>
+
+                    <!-- Right: Pass Details -->
+                    <div class="col-md-7">
+                        <div class="mb-3">
+                            <span class="text-white-50 small d-block">CITY & MALL</span>
+                            <strong class="fs-5 text-white">{{ booking.mall_name }}</strong>
+                            <div class="text-cyan small">{{ booking.city_name }}</div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <span class="text-white-50 small d-block">FLOOR & SLOT</span>
+                                <span class="fs-3 fw-bold text-green font-monospace">{{ booking.floor_level }} - {{ booking.slot_number }}</span>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-white-50 small d-block">VEHICLE</span>
+                                <span class="fs-6 fw-bold text-white font-monospace d-block">{{ booking.vehicle_number }}</span>
+                                <span class="badge bg-secondary text-uppercase extra-small">{{ booking.vehicle_type }}</span>
+                            </div>
+                        </div>
+
+                        <div class="glass-card p-3 bg-dark bg-opacity-50 small">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-white-50">Date:</span>
+                                <strong class="text-white">{{ booking.booking_date }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-white-50">Parking Window:</span>
+                                <strong class="text-white">{{ booking.start_time }} – {{ booking.end_time }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between pt-1 border-top border-secondary border-opacity-25">
+                                <span class="text-white-50">Amount Paid:</span>
+                                <strong class="text-green">₹{{ booking.total_amount }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Action Buttons -->
+                <div class="d-flex flex-wrap justify-content-center gap-2 mt-4 pt-4 border-top border-secondary border-opacity-25 no-print">
+                    <button type="button" class="btn btn-glass btn-sm px-3" data-bs-toggle="modal" data-bs-target="#qrZoomModal">
+                        <i class="fas fa-qrcode me-1 text-cyan"></i> View QR
+                    </button>
+                    <button type="button" onclick="window.print()" class="btn btn-glass btn-sm px-3">
+                        <i class="fas fa-print me-1"></i> Print Parking Pass
+                    </button>
+                    <button type="button" onclick="downloadPassData()" class="btn btn-neon-cyan btn-sm px-3">
+                        <i class="fas fa-download me-1"></i> Download Pass
+                    </button>
+                    <a href="{{ url_for('views.bookings_page') }}" class="btn btn-neon-green btn-sm px-3 ms-auto">
+                        <i class="fas fa-ticket-alt me-1"></i> My Bookings
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Zoomed QR Code -->
+<div class="modal fade" id="qrZoomModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card p-4 border-cyan">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-white fw-bold">SMART PARKING PASS</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div id="modal-qr-big" class="d-flex justify-content-center bg-dark p-3 rounded-4 d-inline-block border border-cyan mb-3"></div>
+                <div class="font-monospace text-cyan fw-bold fs-5 mb-1">{{ booking.booking_code }}</div>
+                <p class="text-white-50 small mb-0">{{ booking.mall_name }} • Slot {{ booking.slot_number }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/booking.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const code = "{{ booking.booking_code }}";
+    const qrData = `SMART PARKING | Code: ${code} | City: {{ booking.city_name }} | Mall: {{ booking.mall_name }} | Floor: {{ booking.floor_level }} | Slot: {{ booking.slot_number }} | Vehicle: {{ booking.vehicle_number }} | Date: {{ booking.booking_date }} | Time: {{ booking.start_time }} - {{ booking.end_time }}`;
+    
+    generateParkingQRCode(code, qrData);
+
+    // Big Modal QR
+    const modalQr = document.getElementById('modal-qr-big');
+    if (modalQr) {
+        new QRCode(modalQr, {
+            text: qrData,
+            width: 220,
+            height: 220,
+            colorDark: "#00f3ff",
+            colorLight: "#050811"
+        });
+    }
+});
+
+function downloadPassData() {
+    const text = `SMART PARKING PASS\n--------------------------------\nBooking ID: {{ booking.booking_code }}\nCity: {{ booking.city_name }}\nMall: {{ booking.mall_name }}\nFloor: {{ booking.floor_level }}\nSlot: {{ booking.slot_number }}\nVehicle: {{ booking.vehicle_number }}\nDate: {{ booking.booking_date }}\nTime: {{ booking.start_time }} - {{ booking.end_time }}\nAmount Paid: ₹{{ booking.total_amount }}\n--------------------------------\nPresent at gate scanner for entry.`;
+    const element = document.createElement('a');
+    const file = new Blob([text], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = `SmartParking_Pass_{{ booking.booking_code }}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    element.remove();
+}
+</script>
+{% endblock %}
+{% endblock %}

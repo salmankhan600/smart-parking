@@ -1,0 +1,93 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Payments & Booking Audit - Smart Parking Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-white fw-bold mb-1">Payments & <span class="text-cyan">Booking Audit Report</span></h2>
+        <p class="text-white-50 mb-0">Full record of user parking passes, payment transaction methods, and status audit logs</p>
+    </div>
+</div>
+
+<div class="glass-card p-4">
+    <div class="table-responsive">
+        <table class="table admin-table">
+            <thead>
+                <tr>
+                    <th>Booking ID</th>
+                    <th>User</th>
+                    <th>Mall & City</th>
+                    <th>Slot</th>
+                    <th>Amount</th>
+                    <th>Payment Method</th>
+                    <th>Payment Status</th>
+                    <th>Date / Time</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in bookings %}
+                <tr>
+                    <td class="font-monospace text-cyan fw-bold">{{ b.booking_code }}</td>
+                    <td>
+                        <strong class="text-white d-block">{{ b.user.name if b.user else 'User' }}</strong>
+                        <span class="text-white-50 small">{{ b.user.email if b.user else '' }}</span>
+                    </td>
+                    <td>
+                        <span class="text-white d-block">{{ b.slot.mall.name if b.slot and b.slot.mall else '' }}</span>
+                        <span class="text-cyan small">{{ b.slot.mall.city.name if b.slot and b.slot.mall and b.slot.mall.city else '' }}</span>
+                    </td>
+                    <td class="font-monospace text-green fw-bold fs-6">{{ b.slot.slot_number if b.slot else '' }}</td>
+                    <td class="text-green fw-bold">₹{{ b.total_amount }}</td>
+                    <td>
+                        {% if b.payments and b.payments|length > 0 %}
+                            <span class="badge bg-secondary font-monospace"><i class="fas fa-credit-card me-1"></i> {{ b.payments[0].payment_method }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary font-monospace"><i class="fas fa-qrcode me-1"></i> UPI</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if b.booking_status == 'cancelled' %}
+                            <span class="badge badge-occupied text-uppercase">REFUNDED</span>
+                        {% else %}
+                            <span class="badge badge-available text-uppercase">SUCCESS</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-white-50 small">
+                        {{ b.created_at.strftime('%Y-%m-%d %I:%M %p') }}
+                    </td>
+                    <td>
+                        {% if b.booking_status != 'cancelled' %}
+                        <button onclick="adminCancelBooking({{ b.id }})" class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" class="text-center text-white-50 py-4">No payment or booking records found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+async function adminCancelBooking(id) {
+    if (!confirm("Cancel this booking and release slot immediately?")) return;
+    const res = await fetch(`/api/bookings/${id}/cancel`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+        showToast(data.message, "success");
+        setTimeout(() => location.reload(), 600);
+    } else {
+        showToast(data.message, "error");
+    }
+}
+</script>
+{% endblock %}
+{% endblock %}

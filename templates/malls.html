@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if selected_city %}Parking in {{ selected_city.name }}{% else %}Browse Smart Malls{% endif %} - Smart Parking{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header & Search Filter Bar -->
+    <div class="row align-items-center mb-4">
+        <div class="col-lg-6">
+            <h1 class="text-white fw-bold mb-2">
+                {% if selected_city %}
+                Parking in <span class="text-cyan">{{ selected_city.name }}</span>
+                {% else %}
+                Explore <span class="text-cyan">Smart Malls</span>
+                {% endif %}
+            </h1>
+            <p class="text-white-50 mb-0">Select a mall to view live 3D basement parking layouts and reserve your slot</p>
+        </div>
+        <div class="col-lg-6 mt-3 mt-lg-0">
+            <form action="{{ url_for('views.malls_page') }}" method="GET" class="d-flex gap-2">
+                {% if selected_city %}
+                <input type="hidden" name="city_id" value="{{ selected_city.id }}">
+                {% endif %}
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-white-50"><i class="fas fa-search"></i></span>
+                    <input type="text" name="q" value="{{ search_q }}" class="form-control form-control-glass" placeholder="Search mall name or address...">
+                </div>
+                <button type="submit" class="btn btn-neon-cyan px-4 fw-semibold">Search</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- City Selector Pills -->
+    <div class="d-flex flex-wrap gap-2 mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+        <a href="{{ url_for('views.malls_page') }}" class="btn btn-sm {% if not selected_city %}btn-neon-cyan{% else %}btn-glass{% endif %}">
+            All Cities
+        </a>
+        {% for city in cities %}
+        <a href="{{ url_for('views.malls_page', city_id=city.id) }}" class="btn btn-sm {% if selected_city and selected_city.id == city.id %}btn-neon-cyan{% else %}btn-glass{% endif %}">
+            {{ city.name }}
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Malls Grid (Minimum 5 malls per city) -->
+    <div class="row g-4">
+        {% for mall in malls %}
+        <div class="col-md-6 col-lg-4">
+            <div class="glass-card h-100 overflow-hidden d-flex flex-column">
+                <div class="mall-card-img-container img-skeleton">
+                    <img src="{{ mall.image_url }}" onerror="this.onerror=null; this.src='/static/images/malls/default-mall.jpg';" alt="{{ mall.name }}">
+                </div>
+                <div class="p-4 d-flex flex-column flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="text-white fw-bold mb-0">{{ mall.name }}</h5>
+                        <span class="badge bg-cyan bg-opacity-10 text-cyan border border-cyan border-opacity-25">{{ mall.city.name }}</span>
+                    </div>
+                    <p class="text-white-50 small mb-2"><i class="fas fa-map-marker-alt text-cyan me-1"></i> {{ mall.address }}</p>
+                    <div class="d-flex justify-content-between extra-small text-white-50 mb-3">
+                        <span><i class="fas fa-clock text-yellow me-1"></i> {{ mall.opening_time }} - {{ mall.closing_time }}</span>
+                        <span><i class="fas fa-star text-warning me-1"></i> {{ mall.rating }} / 5.0</span>
+                    </div>
+                    <p class="text-white-50 extra-small mb-3 flex-grow-1">{{ mall.description }}</p>
+                    
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-25">
+                        <div>
+                            <span class="text-white-50 small d-block">Live Available:</span>
+                            <strong class="text-green fs-6"><i class="fas fa-parking me-1"></i> {{ mall.available_slots }} slots</strong>
+                        </div>
+                        <a href="{{ url_for('views.parking_page', mall_id=mall.id) }}" class="btn btn-neon-cyan btn-sm px-3 fw-semibold">
+                            View Parking <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center py-5">
+            <div class="glass-card p-5">
+                <i class="fas fa-building-circle-exclamation text-muted display-3 mb-3"></i>
+                <h4 class="text-white">No Malls Found</h4>
+                <p class="text-white-50">Try clearing search filters or choosing another city.</p>
+                <a href="{{ url_for('views.malls_page') }}" class="btn btn-neon-cyan mt-2">Reset Filters</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

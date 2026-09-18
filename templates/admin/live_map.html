@@ -1,0 +1,143 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Live 3D Admin Control Map - Smart Parking{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="text-white fw-bold mb-1">Live <span class="text-cyan">3D Admin Control Map</span></h2>
+        <p class="text-white-50 mb-0">Monitor basement floor slot availability and manually override statuses in real-time</p>
+    </div>
+    
+    <div class="d-flex align-items-center gap-2">
+        <select id="admin-mall-select" class="form-select form-control-glass py-1 px-3" onchange="switchAdminMall()">
+            {% for mall in malls %}
+            <option value="{{ mall.id }}">{{ mall.name }} ({{ mall.city.name }})</option>
+            {% endfor %}
+        </select>
+        <button onclick="triggerDemoSimulation()" class="btn btn-neon-green btn-sm px-3">
+            <i class="fas fa-play me-1"></i> Trigger DEMO Simulator
+        </button>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- 3D Canvas Viewport -->
+    <div class="col-lg-9">
+        <div class="glass-card position-relative p-0 overflow-hidden">
+            <div class="canvas-overlay-top">
+                <div class="canvas-controls d-flex gap-2">
+                    <span class="badge bg-danger text-white font-monospace px-3 py-2"><i class="fas fa-dot-circle me-1 animate-pulse"></i> LIVE MONITORING</span>
+                </div>
+                <div class="canvas-controls d-flex gap-2">
+                    <button class="btn btn-glass btn-sm" onclick="window.parkEngine.setTopView()"><i class="fas fa-layer-group me-1"></i> Top View</button>
+                    <button class="btn btn-glass btn-sm" onclick="window.parkEngine.set3DView()"><i class="fas fa-cube me-1"></i> 3D View</button>
+                </div>
+            </div>
+            <div id="canvas-container"></div>
+        </div>
+    </div>
+
+    <!-- Admin Manual Override Drawer -->
+    <div class="col-lg-3">
+        <div id="admin-slot-drawer" class="glass-card p-4 text-center">
+            <i class="fas fa-sliders text-cyan display-4 mb-3"></i>
+            <h5 class="text-white fw-bold">Select a 3D Slot</h5>
+            <p class="text-white-50 small">Click any parking slot on the 3D map to manually change its live operational status.</p>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<!-- Three.js CDN & Controls -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="{{ url_for('static', filename='js/parking3d.js') }}"></script>
+
+<script>
+let parkEngine = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    initAdminEngine(1, 1);
+});
+
+function switchAdminMall() {
+    const mallId = document.getElementById('admin-mall-select').value;
+    initAdminEngine(mallId, 1);
+}
+
+function initAdminEngine(mallId, floorId) {
+    const container = document.getElementById('canvas-container');
+    container.innerHTML = '';
+
+    parkEngine = new Park3DEngine('canvas-container', {
+        mallId: mallId,
+        floorId: floorId,
+        isAdmin: true,
+        onSlotSelect: renderAdminSlotDrawer
+    });
+    window.parkEngine = parkEngine;
+}
+
+function renderAdminSlotDrawer(slot) {
+    const drawer = document.getElementById('admin-slot-drawer');
+    
+    drawer.innerHTML = `
+        <div class="text-start">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fs-3 fw-bold text-white font-monospace">Slot ${slot.slot_number}</span>
+                <span class="badge badge-${slot.status} text-uppercase">${slot.status}</span>
+            </div>
+
+            <div class="glass-card p-3 mb-3 bg-dark bg-opacity-50 small">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-white-50">Type:</span>
+                    <strong class="text-white text-uppercase">${slot.slot_type}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-white-50">Rate / Hr:</span>
+                    <strong class="text-green">₹${slot.price_per_hour}</strong>
+                </div>
+            </div>
+
+            <h6 class="text-white-50 small fw-semibold mb-2">MANUAL STATUS OVERRIDE:</h6>
+            <div class="d-grid gap-2">
+                <button onclick="overrideSlotStatus(${slot.id}, 'available')" class="btn btn-outline-success btn-sm text-start">
+                    <i class="fas fa-check-circle me-2"></i> Mark Available
+                </button>
+                <button onclick="overrideSlotStatus(${slot.id}, 'occupied')" class="btn btn-outline-danger btn-sm text-start">
+                    <i class="fas fa-car me-2"></i> Mark Occupied
+                </button>
+                <button onclick="overrideSlotStatus(${slot.id}, 'reserved')" class="btn btn-outline-warning btn-sm text-start">
+                    <i class="fas fa-bookmark me-2"></i> Mark Reserved
+                </button>
+                <button onclick="overrideSlotStatus(${slot.id}, 'disabled')" class="btn btn-outline-info btn-sm text-start">
+                    <i class="fas fa-ban me-2"></i> Mark Disabled / Out of Order
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+async function overrideSlotStatus(slotId, newStatus) {
+    try {
+        const res = await fetch(`/api/admin/slots/${slotId}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`Slot status updated to ${newStatus.toUpperCase()}`, 'success');
+            if (parkEngine) parkEngine.loadFloorData();
+            renderAdminSlotDrawer(data.slot);
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (err) {
+        showToast("Override failed.", "error");
+    }
+}
+</script>
+{% endblock %}
+{% endblock %}

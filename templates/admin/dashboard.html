@@ -1,0 +1,107 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Admin Analytics Dashboard - Smart Parking{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="text-white fw-bold mb-1">System <span class="text-cyan">Dashboard</span></h2>
+    <p class="text-white-50">Real-time overview of cities, malls, slot occupancy, revenue, and payment methods</p>
+</div>
+
+<!-- Metrics Cards Grid -->
+<div class="row g-3 mb-4" id="admin-metrics-row">
+    <div class="col-6 col-md-3">
+        <div class="stat-card-admin">
+            <div>
+                <span class="text-white-50 small font-monospace">TOTAL CITIES</span>
+                <div class="fs-3 fw-bold text-white" id="metric-cities">0</div>
+            </div>
+            <div class="icon-box bg-cyan bg-opacity-10 text-cyan">
+                <i class="fas fa-city"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card-admin">
+            <div>
+                <span class="text-white-50 small font-monospace">TOTAL MALLS</span>
+                <div class="fs-3 fw-bold text-white" id="metric-malls">0</div>
+            </div>
+            <div class="icon-box bg-purple bg-opacity-10 text-purple">
+                <i class="fas fa-building"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card-admin">
+            <div>
+                <span class="text-white-50 small font-monospace">TOTAL SLOTS</span>
+                <div class="fs-3 fw-bold text-white" id="metric-slots">0</div>
+            </div>
+            <div class="icon-box bg-yellow bg-opacity-10 text-yellow">
+                <i class="fas fa-parking"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card-admin">
+            <div>
+                <span class="text-white-50 small font-monospace">TOTAL REVENUE</span>
+                <div class="fs-3 fw-bold text-green" id="metric-revenue">₹0</div>
+            </div>
+            <div class="icon-box bg-green bg-opacity-10 text-green">
+                <i class="fas fa-indian-rupee-sign"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart Analytics Row -->
+<div class="row g-4">
+    <!-- Line Chart: Daily Bookings -->
+    <div class="col-lg-8">
+        <div class="glass-card p-4">
+            <h5 class="text-white fw-bold mb-3"><i class="fas fa-chart-line text-cyan me-2"></i>Daily Booking Trend (Last 7 Days)</h5>
+            <div style="height: 280px;">
+                <canvas id="bookingChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Doughnut Chart: Occupancy Breakdown -->
+    <div class="col-lg-4">
+        <div class="glass-card p-4">
+            <h5 class="text-white fw-bold mb-3"><i class="fas fa-pie-chart text-green me-2"></i>Live Slot Breakdown</h5>
+            <div style="height: 280px;" class="d-flex align-items-center justify-content-center">
+                <canvas id="occupancyChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', fetchAdminDashboard);
+
+async function fetchAdminDashboard() {
+    try {
+        const res = await fetch('/api/admin/dashboard');
+        const data = await res.json();
+        
+        if (data.success) {
+            const m = data.metrics;
+            document.getElementById('metric-cities').innerText = m.total_cities;
+            document.getElementById('metric-malls').innerText = m.total_malls;
+            document.getElementById('metric-slots').innerText = m.total_slots;
+            document.getElementById('metric-revenue').innerText = `₹${m.total_revenue}`;
+
+            // Initialize Analytics Charts
+            initAdminCharts(data.daily_stats, m);
+        }
+    } catch (err) {
+        console.error("Dashboard data error:", err);
+    }
+}
+</script>
+{% endblock %}
+{% endblock %}
